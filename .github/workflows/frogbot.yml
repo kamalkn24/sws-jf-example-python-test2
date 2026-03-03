@@ -1,0 +1,41 @@
+name: "Frogbot PR Scan"
+on: 
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  # This is required for requesting the OIDC token
+  id-token: write
+  # This is required for actions/checkout
+  contents: write
+  # This is required for FrogBot to create PR comments
+  pull-requests: write
+
+jobs:
+  frogbot-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # This action sets up the JFrog CLI with the Artifactory URL and access token 
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.JF_URL }}
+        with:
+          # oidc-provider-name: ${OIDC_PROVIDER_NAME} # <owner>/<repo>@github
+          oidc-provider-name: kamalkn24/sws-jf-example-python-test2@github
+
+      - name: Configure pip to use Artifactory Virtual Repo
+        run: |           
+          jf pip-config --repo-resolve=sws-jf-example-python-remote 
+
+      - name: Run Frogbit@v2
+        uses: jfrog/frogbot@v2
+        env:
+          JF_URL: ${{ vars.JF_URL }}
+          JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: turn on deeper CLI logs while we troubleshoot
+          # JFROG_CLI_LOG_LEVEL: "DEBUG" 
+        with:
+          oidc-provider-name: kamalkn24/sws-jf-example-python-test2@github 
