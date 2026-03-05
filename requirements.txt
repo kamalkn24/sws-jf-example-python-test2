@@ -1,6 +1,6 @@
-#PyYAML>3.11
-#nltk
-#numpy==2.3.5
+PyYAML>3.11
+nltk
+numpy==2.3.5
 Flask==0.12
 requests==2.18.0
 urllib3
