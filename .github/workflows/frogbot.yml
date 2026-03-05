@@ -28,7 +28,7 @@ jobs:
 
       - name: Configure pip to use Artifactory Virtual Repo
         run: |           
-          jf pip-config --repo-resolve=sws-jf-example-python-remote 
+          jf pip-config --repo-resolve=sws-jf-example-python-remote --server-id-resolve=setup-jfrog-cli-server
 
       - name: Run Frogbit@v2
         uses: jfrog/frogbot@v2
