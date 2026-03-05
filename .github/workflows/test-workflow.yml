@@ -1,31 +1,26 @@
 name: "JFrog Python Example"
-on: 
+
+on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
-  # This is required for requesting the OIDC token
   id-token: write
-  # This is required for actions/checkout
   contents: write
-  # This is required for FrogBot to create PR comments
   pull-requests: write
-  # This is required by upload-sarif action to view the JFrog findings in GitHub advanced security's code scanning tab
   actions: read
   security-events: write
 
 env:
-  # JF_URL: "https://dominoprintingsciences.jfrog.io/"
-  # JF_USER: "ukbh-sv-jenkins@domino-uk.com"
-  # JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_ACCESS_TOKEN }}
   BUILD_NAME: "JFrog-Scan-Example-Build"
-  BUILD_NUMBER: "${{ github.run_number }}"  
-  
+  BUILD_NUMBER: "${{ github.run_number }}"
+
 jobs:
   build-scan:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,66 +28,66 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
-      # This action sets up the JFrog CLI with the Artifactory URL and access token 
+      # Setup JFrog CLI using OIDC
       - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v4
         env:
           JF_URL: ${{ secrets.JF_URL }}
         with:
-          # oidc-provider-name: ${OIDC_PROVIDER_NAME} # <owner>/<repo>@github
           oidc-provider-name: kamalkn24/sws-jf-example-python-test2@github
 
-      - name: Install dependencies
-        run: |        
-          sudo apt-get update
-          sudo apt-get install -y libxml2-dev libxslt-dev python3-dev gcc
-          
-      - name: Configure pip to use Artifactory Virtual Repo
-        run: |           
-          jf pip-config --repo-resolve=sws-jf-example-python-remote 
+      # Configure pip to resolve from Artifactory
+      - name: Configure pip
+        run: |
+          jf pip-config \
+            --repo-resolve=sws-jf-example-python-remote \
+            --server-id-resolve=setup-jfrog-cli-server
 
-      - name: Install Python Dependencies 
-        run: |     
-          # jf curation-audit
-          jf pip install --upgrade pip 
-          jf pip install setuptools wheel build
-          jf pip install -r requirements.txt --build-name $BUILD_NAME --build-number $BUILD_NUMBER  --project=jf-example
+      # Install dependencies
+      - name: Install Python Dependencies
+        run: |
+          jf pip install --upgrade pip setuptools wheel build
+          jf pip install -r requirements.txt \
+            --build-name $BUILD_NAME \
+            --build-number $BUILD_NUMBER \
+            --project=jf-example
 
+      # Build artifact
       - name: Build artifact
         run: |
-          #Step 1. Start the build
           python -m build
-      
-      - name: Upload artifact and build info to Artifactory
-        run: |          
-          #Step 2. Collect Env:build-collect-env, bce: Collect environment variables. Environment variables can be excluded using the build-publish command:  traceability, easy debugging and compliance.        #Xray can scan builds with full context (including environment).
-          jf rt bce $BUILD_NAME $BUILD_NUMBER  --project=jf-example
-          
-          #Step 3. Add dependencies and artifacts build-add-dependencies, bad  Adds dependencies from the local file-system to the build info.
-          jf rt upload "dist/*" "sws-jf-example-python-local" --build-name $BUILD_NAME --build-number $BUILD_NUMBER  --project=jf-example
-          jf rt bad $BUILD_NAME $BUILD_NUMBER requirements.txt  --project=jf-example
-          
-          #Step 4. End the build
-                  
-          #Step 5. Publish build info.
+
+      # Upload artifacts and build info
+      - name: Upload artifact and build info
+        run: |
+          jf rt bce $BUILD_NAME $BUILD_NUMBER --project=jf-example
+
+          jf rt upload "dist/*" "sws-jf-example-python-local" \
+            --build-name $BUILD_NAME \
+            --build-number $BUILD_NUMBER \
+            --project=jf-example
+
+          jf rt bad $BUILD_NAME $BUILD_NUMBER requirements.txt --project=jf-example
+
           jf rt bp $BUILD_NAME $BUILD_NUMBER --project=jf-example
 
-      - name: Run Xray scan of the Build
+      # Xray build scan
+      - name: Run Xray scan
         run: |
-         # This action will scan and show the results of xray scan 
-         jf build-scan --fail=true --format=sarif $BUILD_NAME $BUILD_NUMBER  --project=jf-example
-      
-      - name: Xray dependency audit (requirements.txt)
+          jf build-scan $BUILD_NAME $BUILD_NUMBER \
+            --fail=true \
+            --format=sarif \
+            --project=jf-example > jfrog_scan_results.sarif
+
+      # Dependency audit
+      - name: Xray dependency audit
         run: |
-          # Audits project dependencies (SCA) in the workspace
-          jf audit --format=json #> jfrog_scan_results.sarif
-       #   jf rt upload "jfrog_scan_results.sarif" "sws-jf-example-python-local" --build-name $BUILD_NAME --build-number $BUILD_NUMBER
+          jf audit --format=sarif > jfrog_audit_results.sarif
 
-  #    - name: Upload output to generate autofix
-  #      uses: github/codeql-action/upload-sarif@v3
-  #      with:
-  #        sarif_file: jfrog_scan_results.sarif
-          
-
+      # Upload SARIF results to GitHub Security tab
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: jfrog_scan_results.sarif
