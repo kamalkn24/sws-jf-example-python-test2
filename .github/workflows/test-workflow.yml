@@ -25,12 +25,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Setup Python 3.9
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
-      # Setup JFrog CLI using OIDC
+      # Install system dependencies for Pillow and other packages
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev \
+            liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev \
+            libopenjp2-7-dev gcc
+
+      # Setup JFrog CLI with OIDC
       - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v4
         env:
@@ -45,7 +55,7 @@ jobs:
             --repo-resolve=sws-jf-example-python-remote \
             --server-id-resolve=setup-jfrog-cli-server
 
-      # Install dependencies
+      # Install Python dependencies
       - name: Install Python Dependencies
         run: |
           jf pip install --upgrade pip setuptools wheel build
@@ -54,12 +64,12 @@ jobs:
             --build-number $BUILD_NUMBER \
             --project=jf-example
 
-      # Build artifact
+      # Build Python package
       - name: Build artifact
         run: |
           python -m build
 
-      # Upload artifacts and build info
+      # Upload artifacts and build info to Artifactory
       - name: Upload artifact and build info
         run: |
           jf rt bce $BUILD_NAME $BUILD_NUMBER --project=jf-example
@@ -73,7 +83,7 @@ jobs:
 
           jf rt bp $BUILD_NAME $BUILD_NUMBER --project=jf-example
 
-      # Xray build scan
+      # Run Xray build scan
       - name: Run Xray scan
         run: |
           jf build-scan $BUILD_NAME $BUILD_NUMBER \
@@ -81,7 +91,7 @@ jobs:
             --format=sarif \
             --project=jf-example > jfrog_scan_results.sarif
 
-      # Dependency audit
+      # Run dependency audit
       - name: Xray dependency audit
         run: |
           jf audit --format=sarif > jfrog_audit_results.sarif
