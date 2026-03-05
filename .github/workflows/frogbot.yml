@@ -36,6 +36,7 @@ jobs:
           JF_URL: ${{ secrets.JF_URL }}
           JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Optional: turn on deeper CLI logs while we troubleshoot
-          JFROG_CLI_LOG_LEVEL: "DEBUG" 
+          JFROG_CLI_LOG_LEVEL: "DEBUG"
+          FROGBOT_LOG_LEVEL: "DEBUG"
         with:
           oidc-provider-name: kamalkn24/sws-jf-example-python-test2@github 
