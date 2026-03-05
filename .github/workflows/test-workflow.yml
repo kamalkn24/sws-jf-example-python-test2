@@ -31,12 +31,13 @@ jobs:
         with:
           python-version: "3.9"
 
-      # Install system dependencies for Pillow and other packages
+      # Install system dependencies for Pillow, lxml, and other packages
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev \
+            libxml2-dev libxslt1-dev zlib1g-dev \
+            libjpeg-dev libtiff-dev libfreetype6-dev \
             liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev \
             libopenjp2-7-dev gcc
 
