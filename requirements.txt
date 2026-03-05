@@ -6,3 +6,4 @@ requests==2.18.0
 urllib3
 pybluemonday
 pipenv==2021.11.23
+Jinja2==2.10
